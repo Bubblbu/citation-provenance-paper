@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["bubblbu <asura.enkhbayar@gmail.com>"]
 packages = [
-    { include = "scite_dev",  from = "src"},
+    { include = "foobar",  from = "src"},
 ]
 
 [tool.poetry.dependencies]
