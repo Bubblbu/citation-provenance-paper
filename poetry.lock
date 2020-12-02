@@ -498,6 +498,14 @@ fast = ["fastjsonschema"]
 test = ["fastjsonschema", "testpath", "pytest", "pytest-cov"]
 
 [[package]]
+category = "main"
+description = "JsonDecoder for ndjson"
+name = "ndjson"
+optional = false
+python-versions = "*"
+version = "0.3.1"
+
+[[package]]
 category = "dev"
 description = "Patch asyncio to allow nested event loops"
 name = "nest-asyncio"
@@ -973,7 +981,7 @@ version = "3.5.1"
 notebook = ">=4.4.1"
 
 [metadata]
-content-hash = "94250da2b24347f6c7ca2f23042b20ebc8d01b853d6e8f5cbbf9e151e28a9174"
+content-hash = "7f58f996a7fbacc81f621a1e360bd98b90e4a62134494091ca4f0b61fddb5221"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1243,6 +1251,10 @@ nbconvert = [
 nbformat = [
     {file = "nbformat-5.0.8-py3-none-any.whl", hash = "sha256:aa9450c16d29286dc69b92ea4913c1bffe86488f90184445996ccc03a2f60382"},
     {file = "nbformat-5.0.8.tar.gz", hash = "sha256:f545b22138865bfbcc6b1ffe89ed5a2b8e2dc5d4fe876f2ca60d8e6f702a30f8"},
+]
+ndjson = [
+    {file = "ndjson-0.3.1-py2.py3-none-any.whl", hash = "sha256:839c22275e6baa3040077b83c005ac24199b94973309a8a1809be962c753a410"},
+    {file = "ndjson-0.3.1.tar.gz", hash = "sha256:bf9746cb6bb1cb53d172cda7f154c07c786d665ff28341e4e689b796b229e5d6"},
 ]
 nest-asyncio = [
     {file = "nest_asyncio-1.4.2-py3-none-any.whl", hash = "sha256:c2d3bdc76ba235a7ad215128afe31d74a320d25790c50cd94685ec5ea221b94d"},
