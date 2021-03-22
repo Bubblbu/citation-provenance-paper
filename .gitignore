@@ -136,3 +136,10 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# data
+*.csv
+*.jsonl
+*.log
+
+data/raw_data/gender/*
