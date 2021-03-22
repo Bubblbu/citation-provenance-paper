@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import ndjson
-import pandas as pd
 import requests
+from ratelimit import limits, sleep_and_retry
 from tqdm import tqdm
 
 
@@ -19,23 +19,24 @@ class Scite:
     - "all": returns both citing and cited articles for a select DOI
     """
 
-    def __init__(
-        self,
-        api_key=None,
-    ):
+    def __init__(self, api_key=None, ratelimit=(1, 1)):
         self.endpoints = {
             "incoming": "https://api.scite.ai/citations/citing/{}",
             "all": "https://api.scite.ai/citations/all/{}",
-            "tallies": "https://api.scite.ai/tallies/",
+            "papers": "https://api.scite.ai/papers/{}",
+            "tallies": "https://api.scite.ai/tallies/{}",
         }
         self.session = requests.session()
+
+        self._api_get = sleep_and_retry
+        self._api_get = limits(calls=ratelimit[0], period=ratelimit[1])
 
         if api_key:
             self.headers = {"Authorization": f"Bearer {api_key}"}
         else:
             self.headers = None
 
-    def __api_get(self, url, doi, headers, params):
+    def __api_get(self, url, doi, headers, params=None):
         # Execute query
         url = url.format(doi)
         r = self.session.get(url, headers=headers, params=params)
@@ -46,22 +47,21 @@ class Scite:
         else:
             return r
 
-    def get_doi(self, doi, citations="all", tallies=False, papers=False, df=False):
-        """Retrieve data for one DOI
+    def doi(
+        self, doi, only_incoming="all", citations=True, tallies=False, papers=False
+    ):
+        """Retrieve data for one DOI"""
+        # Set up API
+        if only_incoming:
+            url = self.endpoints["incoming"]
+        else:
+            url = self.endpoints["all"]
 
-        Currently supported endpoints:
-
-        - All
-        - Incoming
-        - Tallies
-        """
-        if citations not in self.endpoints:
-            raise ValueError(
-                f"Could not find '{citations}' in available endpoints. Try one of these: f{list(self.endpoints.values())}"
-            )
-        url = self.endpoints[citations]
-
-        params = {"tallies": str(tallies).lower(), "papers": str(papers).lower()}
+        params = {
+            "citations": str(citations).lower(),
+            "tallies": str(tallies).lower(),
+            "papers": str(papers).lower(),
+        }
 
         try:
             data = self.__api_get(url, doi, self.headers, params).json()
@@ -69,47 +69,16 @@ class Scite:
             raise
 
         # Add `papers` or `tallies` object depending on request
-        if papers or tallies:
-            result = [data["citations"]]
+        return data
+
+    def citations(self, dois, output, overwrite=False, only_incoming=False):
+        # Set up API
+        if only_incoming:
+            url = self.endpoints["incoming"]
         else:
-            return data["citations"]
+            url = self.endpoints["all"]
 
-        if papers:
-            result.append(data["papers"])
-
-        if tallies:
-            result.append(data["tallies"])
-
-        # Convert results to pandas dataframes if required
-        if df:
-            result[0] = pd.DataFrame.from_records(result[0])
-
-            if papers:
-                result[1] = pd.DataFrame.from_dict(result[1]).T
-                result[1]["target"] = doi
-                result[1].index = range(0, len(result[1]))
-
-            if tallies:
-                result[2] = pd.DataFrame.from_dict(result[2]).T
-                result[2].index = range(0, len(result[2]))
-                result[2].set_index("doi", inplace=True)
-
-        return result
-
-    def get_dois(
-        self,
-        dois,
-        output,
-        overwrite=False,
-        citations="all",
-        tallies=False,
-        papers=False,
-    ):
-        # Verify correct function call
-        if citations not in self.endpoints:
-            raise ValueError(
-                f"Could not find '{citations}' in available endpoints. Try one of these: f{list(self.endpoints.values())}"
-            )
+        params = {"tallies": False, "papers": False}
 
         if output is None:
             raise ValueError("'outfile' is missing. Please provide path.")
@@ -121,22 +90,17 @@ class Scite:
                 outfile.write_text("")
             else:
                 raise FileExistsError(
-                    "Outfile already exists. Set 'overwrite' to True if you want to overwrite it."
+                    "Outfile already exists. Set 'overwrite' "
+                    "to True if you want to overwrite it."
                 )
-
-        # Set up API
-        url = self.endpoints[citations]
-        params = {"tallies": str(tallies).lower(), "papers": str(papers).lower()}
 
         with open(outfile, "a") as f:
             writer = ndjson.writer(f)
             for doi in tqdm(dois):
                 # Get citations from Scite
                 try:
-                    result = self.__api_get(
-                        url, doi, self.headers, params
-                    )
-                    result = result.json()['citations']
+                    result = self.__api_get(url, doi, self.headers, params)
+                    result = result.json()["citations"]
                     # print(len(result))
                 except SciteException as e:
                     print(f"{doi} failed: {str(e)}")
@@ -146,7 +110,90 @@ class Scite:
                 for citation in result:
                     writer.writerow(citation)
 
-    def citation_tally(self, doi):
+    def related_papers(self, dois, output, overwrite=False, only_incoming=False):
+        # Set up API
+        if only_incoming:
+            url = self.endpoints["incoming"]
+        else:
+            url = self.endpoints["all"]
+
+        params = {"papers": True, "tallies": False, "citations": False}
+
+        if output is None:
+            raise ValueError("'outfile' is missing. Please provide path.")
+
+        # Setup outfile
+        outfile = Path(output)
+        if outfile.exists():
+            if overwrite:
+                outfile.write_text("")
+            else:
+                raise FileExistsError(
+                    "Outfile already exists. Set 'overwrite' "
+                    "to True if you want to overwrite it."
+                )
+
+        base = outfile.parent
+        name = outfile.name
+        log = Path(base / (name.split(".")[0] + "_log"))
+
+        with open(log, "w") as logf:
+            with open(outfile, "a") as f:
+                writer = ndjson.writer(f)
+                for doi in tqdm(dois):
+                    # Get citations from Scite
+                    try:
+                        result = self.__api_get(url, doi, self.headers, params)
+                    except SciteException as e:
+                        logf.write(f"{doi} | {str(e)}\n")
+                        continue
+
+                    result = result.json()["papers"]
+                    # Write citation object as a line in jsonl
+                    for v in result.values():
+                        writer.writerow(v)
+
+    def papers(self, dois, output, overwrite=False, citations="all"):
+        # Set up API
+        url = self.endpoints["papers"]
+        if type(dois) is not list:
+            dois = [dois]
+
+        if output is None:
+            raise ValueError("'outfile' is missing. Please provide path.")
+
+        # Setup outfile
+        outfile = Path(output)
+        if outfile.exists():
+            if overwrite:
+                outfile.write_text("")
+            else:
+                raise FileExistsError(
+                    "Outfile already exists. Set 'overwrite' "
+                    "to True if you want to overwrite it."
+                )
+
+        base = outfile.parent
+        name = outfile.name
+        log = Path(base / (name.split(".")[0] + "_log"))
+
+        with open(log, "w") as logf:
+            with open(outfile, "a") as f:
+                writer = ndjson.writer(f)
+                for doi in tqdm(dois):
+                    # Get citations from Scite
+                    try:
+                        result = self.__api_get(url, doi, self.headers)
+                    except SciteException as e:
+                        logf.write(f"{doi} | {str(e)}\n")
+                        continue
+
+                    result = result.json()
+
+                    # Write citation object as a line in jsonl
+                    writer.writerow(result)
+
+    def tallies(self, doi):
         url = self.endpoints["tallies"]
 
         # list of dois is used
