@@ -135,7 +135,7 @@ class Scite:
 
         base = outfile.parent
         name = outfile.name
-        log = Path(base / (name.split(".")[0] + "_log"))
+        log = Path(base / (name.split(".")[0] + ".log"))
 
         with open(log, "w") as logf:
             with open(outfile, "a") as f:
@@ -175,7 +175,7 @@ class Scite:
 
         base = outfile.parent
         name = outfile.name
-        log = Path(base / (name.split(".")[0] + "_log"))
+        log = Path(base / (name.split(".")[0] + ".log"))
 
         with open(log, "w") as logf:
             with open(outfile, "a") as f:
