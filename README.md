@@ -1,17 +1,34 @@
-# Content-based Citations
+# [WIP] Citational Engagement
 
 > Reproduction material for paper
 
-- Code
+Paper abstract:
+
+*Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract Abstract*
+
+---
+
+This repository contains:
+
+- Links to additional material
+- Results and outputs presented in the paper
+- Data collection and analysis code
 - Instruction to reproduce
-- Results presented in paper
-- Additional materials presented in paper
 
-## Requirements
+## The paper and other resources
 
-TBA
+- Provide link to data.
+- Provide link to preprint.
+- Provide link to published version.
 
-## Instructions
+## Reproduction
+
+### Requirements
+
+- Python v3.x.x
+- Poetry v1.x.x
+
+### Instructions
 
 All scripts required to run are located in `scripts`.
 
